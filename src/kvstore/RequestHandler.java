@@ -6,18 +6,23 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class RequestHandler implements Runnable {
 	private ServerSocket server;
 	Socket socket = null; 
 	private int port;
 	DataInputStream in;
-	
-	
-	public RequestHandler(ServerSocket server, int port) {
+	private ConcurrentHashMap <String, String> map;
+	private ConcurrentHashMap <String, String> replicaMap;
+
+
+	public RequestHandler(ServerSocket server, int port, ConcurrentHashMap <String, String> map, ConcurrentHashMap <String, String> replicaMap) {
 		super();
 		this.server = server;
 		this.port = port;
+		this.map = map;
+		this.replicaMap = replicaMap;
 	}
 
 
@@ -25,46 +30,41 @@ public class RequestHandler implements Runnable {
 	public void run() {
 		// TODO Auto-generated method stub
 		System.out.println("Inside run");
-		
+
 		try {
 			server = new ServerSocket(this.port); 
-			
-			
-            System.out.println("Server started"); 
-  
-            System.out.println("Waiting for a client ..."); 
-  
-            
-            
-	            String line = ""; 
-	            try
-                { 
-                	
-	            // reads message from client until "Over" is sent 
-	            	while (true) 
-	            	{ 
-	            		socket = server.accept(); 
-	                	System.out.println("Client accepted");
-	        			in = new DataInputStream( new BufferedInputStream(socket.getInputStream())); 
-	        	  
-	                    line = in.readUTF(); 
-	                    //line = in.readLine();
-	                    System.out.println(line); 
-	                    if(line.equals("Over")) break;
-	  
-	                
-	                
-	            	} 
-                }
-	            catch(IOException i) 
-                { 
-                    System.out.println(i); 
-                } 
-	            System.out.println("Closing connection"); 
-	  
-	            // close connection 
-	            in.close(); 
-			
+
+
+			System.out.println("Server started"); 
+
+			System.out.println("Waiting for a client ..."); 
+
+
+
+			String line = ""; 
+			try
+			{ 
+
+				// reads message from client until "Over" is sent 
+				while (true) 
+				{ 
+					socket = server.accept(); 
+					
+					Thread t = new Thread(new ProcessRequest(socket, map, replicaMap));
+					t.start();
+
+
+				} 
+			}
+			catch(IOException i) 
+			{ 
+				System.out.println(i); 
+			} 
+			System.out.println("Closing connection"); 
+
+			// close connection 
+			in.close(); 
+
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -82,8 +82,8 @@ public class RequestHandler implements Runnable {
 				} 
 
 		}
-		
-		
+
+
 	}
 	public void stop() {
 		try {
@@ -98,6 +98,6 @@ public class RequestHandler implements Runnable {
 			e.printStackTrace();
 		}
 	}
-	
+
 
 }
