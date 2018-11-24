@@ -44,6 +44,14 @@ public class ProcessRequest implements Runnable {
 		JSONObject responseObj = new JSONObject();
 		responseObj.put("msgType", "CloningNew");
 		responseObj.put("Data", array);
+		JSONArray replicaArray = new JSONArray();
+		for(String key : replicaMap.keySet()) {
+			JSONObject repObj = new JSONObject();
+			repObj.put("key", key);
+			repObj.put("value", map.get(key));
+			replicaArray.add(repObj);
+		}
+		responseObj.put("ReplicationData", replicaArray);
 		DataOutputStream outStream;
 		try {
 			outStream = new DataOutputStream(socket.getOutputStream());
