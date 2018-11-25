@@ -31,10 +31,11 @@ public class TestSlave {
    
 	public static void main(String []args) {
 		try {
-			System.out.println(hashTo64bit(Integer.toString(8081)));
-			System.out.println(hashTo64bit(Integer.toString(8082)));
-/*
-			Socket socket = new Socket("127.0.0.1", 5651);
+			System.out.println(hash("foo1"));
+			System.out.println(hash(Integer.toString(8081)));
+			System.out.println(hash(Integer.toString(8082)));
+
+			Socket socket = new Socket("127.0.0.1", 5180);
 			DataOutputStream op = new DataOutputStream(socket.getOutputStream());
 			JSONObject obj = new JSONObject();
 			obj.put("msgType", "CloningNew");
@@ -50,7 +51,7 @@ public class TestSlave {
 			op.close();
 			socket.close();
 			//
-			 */
+			 
 			 
 			//System.out.println(hashTo64bit("kotak"));
 			

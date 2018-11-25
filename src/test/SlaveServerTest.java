@@ -12,10 +12,10 @@ public class SlaveServerTest {
 		slave.setPort(5000 + port);
 		System.out.println(port);
 		try {
-			slave.start();
 			
+			slave.start();			
 			
-			slave.register("10.1.37.56", 9999);
+			slave.register("10.1.37.211", 9999);
 			//slave.show();
 			//Thread.sleep(20000);
 			//slave.stop();

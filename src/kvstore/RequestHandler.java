@@ -13,16 +13,13 @@ public class RequestHandler implements Runnable {
 	Socket socket = null; 
 	private int port;
 	DataInputStream in;
-	private ConcurrentHashMap <String, String> map;
-	private ConcurrentHashMap <String, String> replicaMap;
+	private ServerData serverData;
 
-
-	public RequestHandler(ServerSocket server, int port, ConcurrentHashMap <String, String> map, ConcurrentHashMap <String, String> replicaMap) {
+	public RequestHandler(ServerSocket server, int port, ServerData data) {
 		super();
 		this.server = server;
 		this.port = port;
-		this.map = map;
-		this.replicaMap = replicaMap;
+		this.serverData = data;
 	}
 
 
@@ -49,8 +46,8 @@ public class RequestHandler implements Runnable {
 				while (true) 
 				{ 
 					socket = server.accept(); 
-					
-					Thread t = new Thread(new ProcessRequest(socket, map, replicaMap));
+
+					Thread t = new Thread(new ProcessRequest(socket, this.serverData));
 					t.start();
 
 
