@@ -21,7 +21,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import com.google.gson.*;
 
 
 class slaveinfo
@@ -161,37 +160,7 @@ public class cordinatorserver implements Runnable
 				}
 				
 			}
-//			if(listofslaves.size() > 2)
-//			{	
-//				
-//				System.out.println("index of current " + index);
-//				int successorindex = index+1;
-//
-//
-//				if(successorindex >= listofslaves.size())
-//				{
-//					successorindex = 0;
-//				}
-//				int preindex = index-1;
-//				if(preindex < 0)
-//				{
-//					preindex = listofslaves.size()-1;
-//				}
-//
-//				listoflockedslaves.put(listofslaves.get(index).id , 1);
-//				System.out.println("index of current " + successorindex);
-//				System.out.println("index of current " + preindex);
-//				JSONObject merg1 = recievereplicalist(successorindex , preindex,index);
-//				JSONObject merg2 = recieveoriginal(successorindex , preindex,index);
-//				JSONObject merg3  = new JSONObject();
-//				System.out.println("Merge 1 :"+merg1.toJSONString());
-//				System.out.println("Merge 2 :"+merg2.toJSONString());
-//				merg3.put("msgType", "ReregisterData");
-//				merg3.put("OriginalData", merg1.get("ReplicaData"));
-//				merg3.put("ReplicaData", merg2.get("OriginalData"));
-//				sendjsonstring(csocket, merg3);
-//				listoflockedslaves.remove(listofslaves.get(index).id);
-//			}
+
 			
 			
 		}
@@ -360,17 +329,7 @@ public class cordinatorserver implements Runnable
 		return obj3;
 
 	}
-	private JSONObject recievereplicalist2(int successorindex, int preindex, int index , Socket socket) throws Exception{
-		// TODO Auto-generated method stub
-		//Socket socket = new Socket(listofslaves.get(successorindex).ip,Integer.parseInt(listofslaves.get(successorindex).port));
-		JSONObject obj2 = new JSONObject();
-		obj2.put("msgType", "GetReplica");
-		sendjsonstring(socket, obj2);
-		JSONObject obj3 = getjsonfromstring(socket);
-		socket.close();
-		return obj3;
 
-	}
 	private JSONObject recieveoriginal(int successorindex, int preindex, int index) throws Exception{
 		// TODO Auto-generated method stub
 		Socket socket = new Socket(listofslaves.get(preindex).ip,Integer.parseInt(listofslaves.get(preindex).port));
@@ -382,17 +341,7 @@ public class cordinatorserver implements Runnable
 		return obj3;
 
 	}
-	private JSONObject recieveoriginal2(int successorindex, int preindex, int index , Socket socket) throws Exception{
-		// TODO Auto-generated method stub
-		//Socket socket = new Socket(listofslaves.get(preindex).ip,Integer.parseInt(listofslaves.get(preindex).port));
-		JSONObject obj2 = new JSONObject();
-		obj2.put("msgType", "GetOriginal");
-		sendjsonstring(socket, obj2);
-		JSONObject obj3 = getjsonfromstring(socket);
-		socket.close();
-		return obj3;
 
-	}
 	private void recieveackfromcurrent(int index, int succindex) 
 	{
 		// TODO Auto-generated method stub
@@ -486,12 +435,18 @@ public class cordinatorserver implements Runnable
 	public void recievedatafromsucc(int successorindex , int preindex, int index) {
 		// TODO Auto-generated method stub
 		slaveinfo succ = listofslaves.get(successorindex);
-		messagetofill messobj = new messagetofill();
-		messobj.msgType = "CloningNew";
-		messobj.RangeStart =(listofslaves.get(preindex).id);
-		messobj.RangeEnd = (listofslaves.get(index).id);
-		Gson g = new Gson();
-		String jsonString = g.toJson(messobj);
+		JSONObject obj = new JSONObject();
+		obj.put("msgType","CloningNew" );
+		obj.put("RangeStart", (String)listofslaves.get(preindex).id);
+		obj.put("RangeEnd", (String)listofslaves.get(preindex).id);
+		String jsonString = obj.toJSONString();
+//		messagetofill messobj = new messagetofill();
+//		messobj.msgType = "CloningNew";
+//		messobj.RangeStart =(listofslaves.get(preindex).id);
+//		messobj.RangeEnd = (listofslaves.get(index).id);
+//		
+//		Gson g = new Gson();
+//		String jsonString = g.toJson(messobj);
 		System.out.println("Json sent :"+jsonString);
 		sendmessangetoclient(succ.ip,succ.port,jsonString , successorindex , index );
 
