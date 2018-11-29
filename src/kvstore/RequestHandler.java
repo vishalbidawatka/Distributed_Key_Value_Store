@@ -84,13 +84,12 @@ public class RequestHandler implements Runnable {
 		try {
 			if(in != null)
 				in.close();
-			if(!socket.isClosed())
+			if(socket != null && !socket.isClosed())
 				socket.close();
-			if(!server.isClosed())
-				server.close();
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 	}
 

@@ -104,12 +104,24 @@ public class SlaveServer {
 		if(ack.get("msgType").equals("ExitAck")) {
 			System.out.println(ack);
 			requestHandler.stop();
+			if(in != null)
+				in.close();
+			if(socket != null && !socket.isClosed())
+				socket.close();
+			if(server != null && !server.isClosed())
+				server.close();
 			System.out.println("Server stopped !");
 			
 		}else {
 			System.out.println("Unable to Stop Server !");
 		}
-		socket.close();
+		try {
+			System.exit(0);
+
+		}
+		catch(Exception e) {
+			
+		}
 	}
 	
 	public void show() {
