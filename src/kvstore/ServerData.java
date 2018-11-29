@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class ServerData {
 	
@@ -11,10 +12,13 @@ public class ServerData {
 	public ConcurrentHashMap <String, String> replicaMap = new ConcurrentHashMap<String, String>();
 	public ConcurrentHashMap <String, String> tempMap = new ConcurrentHashMap<String, String>();
 	public ConcurrentHashMap <String, String> tempReplicaMap = new ConcurrentHashMap<String, String>();
-	public HashMap <String, Boolean> mapLock = new HashMap <String, Boolean>();
-	public Lock lock;
+	public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
+	public final Lock readLock = lock.readLock();
+	public final Lock writeLock = lock.writeLock();
+	public int readcount;
+	
 	public ServerData() {
-		lock = new ReentrantLock(true);
+		
 	}
 
 	public ServerData(ConcurrentHashMap<String, String> map, ConcurrentHashMap<String, String> replicaMap,
@@ -24,7 +28,6 @@ public class ServerData {
 		this.replicaMap = replicaMap;
 		this.tempMap = tempMap;
 		this.tempReplicaMap = tempReplicaMap;
-		this.lock = new ReentrantLock(true);
 	}
 
 	public ConcurrentHashMap<String, String> getMap() {
@@ -57,26 +60,6 @@ public class ServerData {
 
 	public void setTempReplicaMap(ConcurrentHashMap<String, String> tempReplicaMap) {
 		this.tempReplicaMap = tempReplicaMap;
-	}
-	public void getLock() {
-		this.lock.lock();
-	}
-	public void put(String key, String value) {
-		
-		
-	}
-	
-	public String get(String key) {
-		if(this.map.containsKey(key))
-			return this.map.get(key);
-		else
-			return "";
-	}
-	public String getFromReplica(String key) {
-		if(this.replicaMap.containsKey(key))
-			return this.replicaMap.get(key);
-		else
-			return "";
 	}
 	
 

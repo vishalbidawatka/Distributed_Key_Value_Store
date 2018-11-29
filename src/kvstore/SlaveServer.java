@@ -22,6 +22,7 @@ public class SlaveServer {
 	private int Port;
 	private RequestHandler requestHandler;
 	private ServerData data;
+	private Thread thread = null;
 //	private ConcurrentHashMap <String, String> map = new ConcurrentHashMap<String, String>();
 //	private ConcurrentHashMap <String, String> replicaMap = new ConcurrentHashMap<String, String>();
 
@@ -65,18 +66,52 @@ public class SlaveServer {
 
 	public void start() throws IOException {
 
-//		requestHandler = new RequestHandler(server, this.Port, map, replicaMap);
 		requestHandler = new RequestHandler(server, this.Port, this.data);
-		Thread thread = new Thread(requestHandler);
+		thread = new Thread(requestHandler);
 		thread.start();
-		//requestHandler.run();
-
 	}
 
-	public void stop() {
-		System.out.println("Server stopped !");
-		requestHandler.stop();
+	public void stop(String masterIp,int masterPort) throws Exception {
+		Socket socket = new Socket(masterIp, masterPort);
+		JSONObject response = new JSONObject();
+		response.put("msgType", "EXIT");
+		
+		JSONArray array = new JSONArray();
+		for (String key : this.data.map.keySet()) {
+			JSONObject jsonObj = new JSONObject();
+			jsonObj.put("Key", key);
+			jsonObj.put("Value", this.data.map.get(key));
+			array.add(jsonObj);
+		}
+		response.put("OriginalData", array);
+		
+		array = new JSONArray();
+		for (String key : this.data.replicaMap.keySet()) {
+			JSONObject jsonObj = new JSONObject();
+			jsonObj.put("Key", key);
+			jsonObj.put("Value", this.data.replicaMap.get(key));
+			array.add(jsonObj);
+		}
+		response.put("ReplicaData", array);
+		
+		response.put("IP", this.Ip);
+		response.put("PORT", this.Port);
+		
+		DataOutputStream out    = new DataOutputStream(socket.getOutputStream());
+		out.writeUTF(response.toString());
+		DataInputStream in = new DataInputStream(socket.getInputStream());
+		JSONObject ack = (JSONObject)new JSONParser().parse( (String)in.readUTF() );
+		if(ack.get("msgType").equals("ExitAck")) {
+			System.out.println(ack);
+			requestHandler.stop();
+			System.out.println("Server stopped !");
+			
+		}else {
+			System.out.println("Unable to Stop Server !");
+		}
+		socket.close();
 	}
+	
 	public void show() {
 		System.out.println("Server is running !");
 	}
@@ -101,22 +136,28 @@ public class SlaveServer {
 			System.out.println(response);
 			JSONParser parser = new JSONParser();
 			JSONObject respObj = (JSONObject)parser.parse(response);
+			
 			if(respObj.get("Complete").equals("NO")) {
 				String finalResponse = input.readUTF();
 				JSONObject finalRespObj = (JSONObject)parser.parse(finalResponse);
+//				System.out.println(finalRespObj);
 				JSONArray array = (JSONArray)finalRespObj.get("Data");
+//				System.out.println(array);
 				for(int i = 0;i < array.size(); i++) {
 					JSONObject dataObj = (JSONObject)array.get(i);
-					String key = (String)dataObj.get("key");
-					String value = (String)dataObj.get("value");
+//					System.out.println(dataObj);
+					String key = (String)dataObj.get("Key");
+					String value = (String)dataObj.get("Value");
+//					System.out.println(key);
+//					System.out.println(value);
 					this.data.map.put(key, value);
 				}
+				
 				JSONArray replicaArray = (JSONArray)finalRespObj.get("ReplicationData");
-
 				for(int i = 0; i < replicaArray.size(); i++) {
 					JSONObject dataObj = (JSONObject)replicaArray.get(i);
-					String key = (String)dataObj.get("key");
-					String value = (String)dataObj.get("value");
+					String key = (String)dataObj.get("Key");
+					String value = (String)dataObj.get("Value");
 					this.data.replicaMap.put(key, value);
 				}
 				JSONObject ackObj = new JSONObject();
@@ -128,9 +169,26 @@ public class SlaveServer {
 				System.out.println("Message sent!");
 						
 			}
-
-
-
+			else if(respObj.get("Complete").equals("RE")) {
+				String finalResponse = input.readUTF();
+				JSONObject finalRespObj = (JSONObject)parser.parse(finalResponse);
+				
+				JSONArray array = (JSONArray)finalRespObj.get("ReplicaData");
+				for(int i = 0;i < array.size(); i++) {
+					JSONObject dataObj = (JSONObject)array.get(i);
+					String key = (String)dataObj.get("Key");
+					String value = (String)dataObj.get("Value");
+					this.data.map.put(key, value);
+				}
+				
+				JSONArray replicaArray = (JSONArray)finalRespObj.get("OriginalData");
+				for(int i = 0; i < replicaArray.size(); i++) {
+					JSONObject dataObj = (JSONObject)replicaArray.get(i);
+					String key = (String)dataObj.get("Key");
+					String value = (String)dataObj.get("Value");
+					this.data.replicaMap.put(key, value);
+				}
+			}
 		}
 
 		catch(Exception e) {

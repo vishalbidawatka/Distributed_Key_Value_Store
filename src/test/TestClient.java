@@ -13,46 +13,38 @@ public class TestClient {
 		Socket socket;
 		Socket socket1;
 		try {
-//			socket1 = new Socket("127.0.0.1", 5883);
-//			DataOutputStream op1 = new DataOutputStream(socket1.getOutputStream());
-//			JSONObject obj1 = new JSONObject();
-//			obj1.put("msgType", "GET");
-//			long h1 = TestSlave.hash("foo1");
-//			obj1.put("Key", Long.toString(h1));
-//			obj1.put("ServerType", "Original");
-//
-//			op1.writeUTF(obj1.toString());
-//			DataInputStream ip1 = new DataInputStream(socket1.getInputStream());
-//			System.out.println(ip1.readUTF().toString());
-//			
-//			op1.close();
-//			socket1.close();
-			
-			socket = new Socket("10.1.37.211", 1234);
+			socket = new Socket("10.1.37.17", 1234);
 			DataOutputStream op = new DataOutputStream(socket.getOutputStream());
 			JSONObject obj = new JSONObject();
-			obj.put("msgType", "PUT");
-			//long h = TestSlave.hash("foo1");
-			//obj.put("Key", Long.toString(h));
-			obj.put("Key", "foo2");
-			obj.put("Value", "bar1");
-			obj.put("ServerType", "Original");
+			
+//			obj.put("msgType", "GET");
+//			obj.put("Key", "dad");
+//			op.writeUTF(obj.toString());
+//			DataInputStream ip = new DataInputStream(socket.getInputStream());
+//			System.out.println(ip.readUTF().toString());
 
+//			obj.put("msgType", "DEL");
+//			obj.put("Key", "MADAR");
+//			op.writeUTF(obj.toString());
+//			DataInputStream ip = new DataInputStream(socket.getInputStream());
+//			System.out.println(ip.readUTF().toString());
+			
+			obj.put("msgType", "PUT");
+			obj.put("Key", "123");
+			obj.put("Value", "heman");
 			op.writeUTF(obj.toString());
 			DataInputStream ip = new DataInputStream(socket.getInputStream());
 			System.out.println(ip.readUTF().toString());
 			obj = new JSONObject();
 			obj.put("msgType", "Commit");
 			op.writeUTF(obj.toString());
-			System.out.println(ip.readUTF().toString());
+//			
 
 			op.close();
 			socket.close();
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		

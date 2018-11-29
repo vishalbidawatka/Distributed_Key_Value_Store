@@ -23,7 +23,7 @@ public class ProcessRequest implements Runnable {
 		this.socket = socket;
 		this.serverData = serverData;
 	}
-
+	
 	public void cloningNew(JSONObject obj) {
 		System.out.println("Inside clonining new method");
 		try {
@@ -33,25 +33,25 @@ public class ProcessRequest implements Runnable {
 			for (String key : this.serverData.map.keySet()) {
 				if(Long.parseLong(key) >= rangeStart && Long.parseLong(key) <= rangeEnd) {
 					JSONObject jsonObj = new JSONObject();
-					jsonObj.put("key", key);
-					jsonObj.put("value", this.serverData.map.get(key));
+					jsonObj.put("Key", key);
+					jsonObj.put("Value", this.serverData.map.get(key));
 					this.serverData.tempMap.put(key, this.serverData.map.get(key));
 					array.add(jsonObj);
 				}
-
-
 			}
+
 			JSONObject responseObj = new JSONObject();
 			responseObj.put("msgType", "CloningNew");
 			responseObj.put("Data", array);
 			JSONArray replicaArray = new JSONArray();
 			for(String key : this.serverData.replicaMap.keySet()) {
 				JSONObject repObj = new JSONObject();
-				repObj.put("key", key);
-				repObj.put("value", this.serverData.replicaMap.get(key));
+				repObj.put("Key", key);
+				repObj.put("Value", this.serverData.replicaMap.get(key));
 				this.serverData.tempReplicaMap.put(key, this.serverData.replicaMap.get(key));
 				replicaArray.add(repObj);
 			}
+
 			responseObj.put("ReplicationData", replicaArray);
 			DataOutputStream outStream;
 
@@ -62,7 +62,6 @@ public class ProcessRequest implements Runnable {
 			outStream.flush();
 			outStream.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			System.out.println("Exception in sending data !");
 			e.printStackTrace();
 		}
@@ -92,23 +91,20 @@ public class ProcessRequest implements Runnable {
 			e.printStackTrace();
 		}
 	}
+
 	public void cloneAbort() {
 		this.serverData.tempMap = new ConcurrentHashMap<String,String>();
 		this.serverData.tempReplicaMap = new ConcurrentHashMap<String,String>();
 	}
+
 	public void handleGet(JSONObject obj) {
 		String key = (String)obj.get("Key");
 		String value = null;
-		this.serverData.lock.lock();
-		if(this.serverData.mapLock.containsKey(key))
-		{
-			while(this.serverData.mapLock.get(key));
-		}
-		this.serverData.lock.unlock();
-		if(this.serverData.map.containsKey(key)) {
+
+		this.serverData.readLock.lock();
+		if(value == null && this.serverData.map.containsKey(key))
 			value = this.serverData.map.get(key);
-		}
-		if(value == null && this.serverData.replicaMap.containsKey(key))
+		else if(value == null && this.serverData.replicaMap.containsKey(key))
 			value = this.serverData.replicaMap.get(key);
 		DataOutputStream outStream = null;
 		try {
@@ -140,68 +136,177 @@ public class ProcessRequest implements Runnable {
 					e.printStackTrace();
 				}
 			}
+			this.serverData.readLock.unlock();
 		}
 	}
+
 	public void handlePut(JSONObject obj, DataInputStream in) {
 		DataOutputStream outStream = null;
 		String key = (String) obj.get("Key");
 		String value = (String) obj.get("Value");
 		String serverType = (String) obj.get("ServerType");
+
+		this.serverData.writeLock.lock();		
 		
-		this.serverData.lock.lock();
-		
-		if(this.serverData.mapLock.containsKey(key) == false ) {
-			this.serverData.mapLock.put(key, true);
-		}
-		
+		try {
+			JSONObject responseObj = new JSONObject();
+			responseObj.put("msgType", "PutReady");
+			outStream = new DataOutputStream(socket.getOutputStream());
+			outStream.writeUTF(responseObj.toString());
+			System.out.println("PUT sending response: " + responseObj.toString());
+			String response = in.readUTF();
 			try {
-				JSONObject responseObj = new JSONObject();
-				responseObj.put("msgType", "PutReady");
-				outStream = new DataOutputStream(socket.getOutputStream());
-				outStream.writeUTF(responseObj.toString());
-				System.out.println("PUT sending response: " + responseObj.toString());
-				String response = in.readUTF();
-				try {
-					responseObj = (JSONObject)(new JSONParser().parse(response));
-					String operation = (String)responseObj.get("msgType");
-					if(operation.equals("PutCommit")) {
-						if(serverType.equals("Original"))
-							this.serverData.map.put(key, value);
-						else if(serverType.equals("Replica"))
-							this.serverData.replicaMap.put(key, value);
-						responseObj = new JSONObject();
-						responseObj.put("msgType", "PutAck");
-						responseObj.put("Status", "Success");
-						outStream.writeUTF(responseObj.toString());
-						System.out.println("Sending: " +responseObj.toString());
-					}
-					
-
-				} catch (ParseException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				responseObj = (JSONObject)(new JSONParser().parse(response));
+				String operation = (String)responseObj.get("msgType");
+				if(operation.equals("PutCommit")) {
+					if(serverType.equals("Original"))
+						this.serverData.map.put(key, value);
+					else if(serverType.equals("Replica"))
+						this.serverData.replicaMap.put(key, value);
+					responseObj = new JSONObject();
+					responseObj.put("msgType", "PutAck");
+					responseObj.put("Status", "Success");
+					outStream.writeUTF(responseObj.toString());
+					System.out.println("Sending: " +responseObj.toString());
 				}
-				outStream.flush();
-
-			} catch (IOException e) {
+			} catch (ParseException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			finally {
-				if(outStream != null ) {
-					try {
-						outStream.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+			outStream.flush();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		finally {
+			if(outStream != null ) {
+				try {
+					outStream.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-				this.serverData.mapLock.put(key, false);
-				this.serverData.lock.unlock();
 			}
-		
-		
+			this.serverData.writeLock.unlock();
+		}
 	}
+	
+	public void handleDel(JSONObject obj, DataInputStream in) {
+		DataOutputStream outStream = null;
+		String key = (String) obj.get("Key");
+		String serverType = (String) obj.get("ServerType");
+
+		this.serverData.writeLock.lock();
+		try {
+			JSONObject responseObj = new JSONObject();
+			responseObj.put("msgType", "DelReady");
+			outStream = new DataOutputStream(socket.getOutputStream());
+			outStream.writeUTF(responseObj.toString());
+			System.out.println("DEL sending response: " + responseObj.toString());
+			String response = in.readUTF();
+			try {
+				responseObj = (JSONObject)(new JSONParser().parse(response));
+				String operation = (String)responseObj.get("msgType");
+				if(operation.equals("DelCommit")) {
+					if(serverType.equals("Original"))
+						this.serverData.map.remove(key);
+					else if(serverType.equals("Replica"))
+						this.serverData.replicaMap.remove(key);
+					responseObj = new JSONObject();
+					responseObj.put("msgType", "DelAck");
+					responseObj.put("Status", "Success");
+					outStream.writeUTF(responseObj.toString());
+					System.out.println("Sending: " +responseObj.toString());
+				}
+			} catch (ParseException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			outStream.flush();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		finally {
+			if(outStream != null ) {
+				try {
+					outStream.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			this.serverData.writeLock.unlock();
+		}
+	}
+
+/********************************************************************************************/
+	public void getOriginal(){
+		JSONArray array = new JSONArray();
+		for (String key : this.serverData.map.keySet()) {
+			JSONObject jsonObj = new JSONObject();
+			jsonObj.put("Key", key);
+			jsonObj.put("Value", this.serverData.map.get(key));
+			array.add(jsonObj);
+		}
+		JSONObject jsonResponse = new JSONObject();
+		jsonResponse.put("OriginalData", array);
+		try {
+			DataOutputStream outstream = new DataOutputStream(socket.getOutputStream());
+			outstream.writeUTF(jsonResponse.toString());
+			outstream.flush();
+			outstream.close();
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void getReplica() {
+		JSONArray array = new JSONArray();
+		for (String key : this.serverData.replicaMap.keySet()) {
+			JSONObject jsonObj = new JSONObject();
+			jsonObj.put("Key", key);
+			jsonObj.put("Value", this.serverData.replicaMap.get(key));
+			array.add(jsonObj);
+		}
+		JSONObject jsonResponse = new JSONObject();
+		jsonResponse.put("ReplicaData", array);
+		try {
+			DataOutputStream outstream = new DataOutputStream(socket.getOutputStream());
+			outstream.writeUTF(jsonResponse.toString());
+			outstream.flush();
+			outstream.close();
+		}catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void copyLists(JSONObject obj) {
+		JSONArray firstMsg = (JSONArray)obj.get("CopyOriginalData");
+		JSONArray secondMsg = (JSONArray)obj.get("CopyReplicaData");
+		copyOriginal(firstMsg);
+		copyReplica(secondMsg);
+	}
+	
+	public void copyOriginal(JSONArray array) {
+		for(int i = 0;i < array.size(); i++) {
+			JSONObject dataObj = (JSONObject)array.get(i);
+			String key = (String)dataObj.get("Key");
+			String value = (String)dataObj.get("Value");
+			this.serverData.map.put(key, value);
+		} 
+	}
+
+	public void copyReplica(JSONArray array) {
+		for(int i = 0;i < array.size(); i++) {
+			JSONObject dataObj = (JSONObject)array.get(i);
+			String key = (String)dataObj.get("Key");
+			String value = (String)dataObj.get("Value");
+			this.serverData.replicaMap.put(key, value);
+		}
+	}
+
+/********************************************************************************************/
 	public void run() {
 
 		System.out.println("Processing requests");
@@ -232,10 +337,24 @@ public class ProcessRequest implements Runnable {
 			else if(messageType.equals("PUT")) {
 				handlePut(obj, in);
 			}
-
+			else if(messageType.equals("DEL")) {
+				handleDel(obj, in);
+			}
+			else if(messageType.equals("GetOriginal")) {
+				getOriginal();
+			}
+			else if(messageType.equals("GetReplica")) {
+				getReplica();
+			}
+			else if(messageType.equals("CopyData")) {
+				copyLists(obj);
+			}
+			else if(messageType.equals("CopyReplica")) {
+				JSONArray array = (JSONArray)obj.get("CopyReplicaData");
+				copyReplica(array);
+			}
 			in.close();
 			socket.close();
-
 		}
 		catch(Exception e) {
 			e.printStackTrace();
